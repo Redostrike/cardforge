@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Forge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<style>
+:root{--bg:#0e0e14;--panel:#15151f;--panel2:#1c1c2a;--border:#2e2e45;--gold:#c9a84c;--gold2:#e8c96e;--gold-dim:#7a6330;--text:#ddd6c8;--text-dim:#7a7468;--card-bg:#1a1008;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'EB Garamond',serif;font-size:15px;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+header{background:linear-gradient(to right,#0a0a10,#15101f,#0a0a10);border-bottom:1px solid var(--gold-dim);padding:0 24px;height:52px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
+header h1{font-family:'Cinzel',serif;font-size:1.5rem;color:var(--gold2);letter-spacing:.12em;text-shadow:0 0 20px rgba(201,168,76,.4);}
+header .subtitle{color:var(--text-dim);font-style:italic;font-size:.88rem;margin-left:auto;}
+footer{background:linear-gradient(to right,#0a0a10,#0e0e14,#0a0a10);border-top:1px solid #1e1e2a;height:26px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;}
+footer .copy{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.12em;color:#3a3a50;text-transform:uppercase;}
+footer .version{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.15em;color:#3a3a50;text-transform:uppercase;}
+#workspace{display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden;}
+#editor-panel{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:22px 26px;}
+#right-panel{display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+#preview-panel{background:var(--panel2);border-bottom:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:8px;flex-shrink:0;}
+.preview-label{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase;}
+#list-panel{background:var(--panel);flex:1;min-height:0;overflow-y:auto;padding:14px 16px;}
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.list-actions{display:flex;gap:6px;flex-wrap:wrap;}
+#card-list{display:flex;flex-direction:column;gap:5px;}
+.empty-state{text-align:center;padding:18px;color:var(--text-dim);font-style:italic;font-size:.85rem;}
+.list-item{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none;}
+.list-item:hover{border-color:var(--gold-dim);background:#1f1f2d;}
+.list-item.active{border-color:var(--gold);background:#1f1a0e;}
+.list-item-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.15);}
+.list-item-info{flex:1;overflow:hidden;}
+.list-item-title{font-family:'Cinzel',serif;font-size:.76rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.list-item-type{font-size:.66rem;color:var(--text-dim);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.list-item-hint{font-size:.58rem;color:var(--gold-dim);font-style:italic;margin-top:1px;opacity:0;transition:opacity .15s;}
+.list-item:hover .list-item-hint{opacity:1;}
+.list-item-btns{display:flex;gap:4px;flex-shrink:0;}
+.section-title{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.2em;color:var(--gold-dim);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.field-group{margin-bottom:16px;}
+label{display:block;font-size:.75rem;color:var(--text-dim);letter-spacing:.08em;font-family:'Cinzel',serif;margin-bottom:5px;}
+input[type="text"],select{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);font-family:'EB Garamond',serif;font-size:15px;padding:7px 10px;border-radius:3px;outline:none;transition:border-color .2s;appearance:none;-webkit-appearance:none;}
+input[type="range"]{width:100%;cursor:pointer;accent-color:var(--gold);}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%237a7468' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer;}
+select option{background:#1c1c2a;color:var(--text);}
+input[type="text"]:focus,select:focus{border-color:var(--gold-dim);}
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.type-row{display:grid;grid-template-columns:145px 1fr;gap:8px;}
+.components-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+.comp-check{display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Cinzel',serif;font-size:.85rem;color:var(--text);user-select:none;}
+.comp-check input[type="checkbox"]{appearance:none;width:18px;height:18px;border:1px solid var(--border);background:var(--panel2);border-radius:2px;cursor:pointer;position:relative;transition:border-color .2s,background .2s;flex-shrink:0;}
+.comp-check input[type="checkbox"]:checked{background:var(--gold-dim);border-color:var(--gold);}
+.comp-check input[type="checkbox"]:checked::after{content:'✓';position:absolute;top:-1px;left:2px;font-size:13px;color:#000;font-weight:bold;}
+.icon-preview-box{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--gold2);background:var(--panel2);border:1px solid var(--border);border-radius:3px;}
+/* icon sub-panel — shown only when icon-show is checked */
+.icon-sub{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-top:6px;}
+.sub-label{font-size:.68rem;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:.1em;margin-bottom:4px;display:block;}
+.quill-wrap{border:1px solid var(--border);border-radius:3px;overflow:hidden;}
+.ql-toolbar.ql-snow{background:var(--panel2);border:none;border-bottom:1px solid var(--border);}
+.ql-container.ql-snow{background:var(--panel2);border:none;font-family:'EB Garamond',serif;font-size:14px;}
+.ql-editor{color:var(--text);min-height:90px;}
+.ql-snow .ql-stroke{stroke:var(--text-dim);}
+.ql-snow .ql-fill{fill:var(--text-dim);}
+.ql-snow .ql-picker{color:var(--text-dim);}
+.ql-snow.ql-toolbar button:hover .ql-stroke{stroke:var(--gold);}
+.ql-split-btn{color:var(--text-dim)!important;font-size:.85rem;cursor:pointer;background:none;border:none;line-height:24px;height:24px;padding:0 5px;vertical-align:middle;}
+.ql-split-btn:hover{color:var(--gold)!important;}
+.desc-hint{font-size:.7rem;color:var(--text-dim);font-style:italic;margin-top:4px;}
+.desc-hint code{background:var(--panel2);border:1px solid var(--border);padding:0 4px;border-radius:2px;font-size:.68rem;color:var(--gold-dim);}
+/* COLOR */
+.color-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;align-items:center;}
+.color-swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:border-color .15s,transform .15s,box-shadow .15s;flex-shrink:0;}
+.color-swatch:hover{transform:scale(1.15);}
+.color-swatch.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(232,201,110,.6);}
+.color-swatch-custom{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--text-dim);transition:border-color .15s,transform .15s;flex-shrink:0;background:var(--panel2);}
+.color-swatch-custom:hover{border-color:var(--gold-dim);transform:scale(1.15);color:var(--text);}
+.color-swatch-custom.active{border-color:var(--gold2);box-shadow:0 0 8px rgba(232,201,110,.6);}
+#color-popup{position:fixed;z-index:300;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.7);display:none;min-width:200px;}
+#color-popup.open{display:block;}
+#color-popup h4{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.15em;color:var(--gold-dim);margin-bottom:10px;}
+.color-popup-swatch{width:100%;height:44px;border-radius:4px;margin-bottom:10px;border:1px solid var(--border);cursor:pointer;display:block;}
+.color-popup-row{display:flex;gap:8px;align-items:center;}
+#color-popup-hex{flex:1;font-family:monospace;font-size:.85rem;padding:6px 8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:3px;outline:none;}
+#color-popup-hex:focus{border-color:var(--gold-dim);}
+.color-popup-apply{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;border:1px solid #8b5fc0;background:linear-gradient(135deg,#4a2d7a,#6b3fa0);color:#fff;transition:all .2s;}
+.color-popup-apply:hover{background:linear-gradient(135deg,#5a3d8a,#7b4fb0);}
+.color-popup-close{position:absolute;top:8px;right:10px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;line-height:1;padding:2px;}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;padding:8px 16px;border-radius:3px;cursor:pointer;border:1px solid;transition:all .2s;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,#4a2d7a,#6b3fa0);border-color:#8b5fc0;color:#fff;}
+.btn-primary:hover{background:linear-gradient(135deg,#5a3d8a,#7b4fb0);box-shadow:0 0 14px rgba(107,63,160,.5);}
+.btn-gold{background:linear-gradient(135deg,#5a3d10,#7a5520);border-color:var(--gold-dim);color:var(--gold2);}
+.btn-gold:hover{background:linear-gradient(135deg,#6a4d20,#8a6530);box-shadow:0 0 12px rgba(201,168,76,.3);}
+.btn-danger{background:transparent;border-color:#6b2020;color:#e07070;}
+.btn-danger:hover{background:rgba(192,64,64,.15);}
+.btn-sm{padding:5px 10px;font-size:.63rem;}
+.editor-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+/* THE CARD (preview) */
+.card{width:260px;height:390px;background:var(--card-bg);border-radius:8px;position:relative;overflow:hidden;display:flex;flex-direction:column;flex-shrink:0;border:2px solid var(--c,#8a6520);box-shadow:0 4px 28px rgba(0,0,0,.7),0 0 22px color-mix(in srgb,var(--c,#6b3fa0) 40%,transparent),inset 0 0 40px rgba(0,0,0,.4);transition:border-color .3s,box-shadow .3s;}
+.card::before{content:'';position:absolute;inset:4px;border:1px solid color-mix(in srgb,var(--c,#8a6520) 45%,transparent);border-radius:5px;pointer-events:none;z-index:2;transition:border-color .3s;}
+.card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--c,#c9a84c) 14%,transparent) 0%,transparent 55%),radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.4) 0%,transparent 60%);pointer-events:none;z-index:1;transition:background .3s;}
+.card-header{padding:9px 13px 6px;position:relative;z-index:3;border-bottom:1px solid color-mix(in srgb,var(--c,#8a6520) 50%,transparent);background:color-mix(in srgb,var(--c,transparent) 10%,transparent);transition:background .3s,border-color .3s;}
+.card-title{font-family:'Cinzel',serif;font-size:.9rem;font-weight:700;color:var(--gold2);text-align:center;letter-spacing:.06em;line-height:1.2;text-shadow:0 1px 6px rgba(0,0,0,.8);min-height:1em;}
+.card-type{font-family:'EB Garamond',serif;font-style:italic;font-size:.68rem;text-align:center;color:var(--text-dim);letter-spacing:.04em;}
+/* icon: center-front sits between title and type */
+.card-icon-center{text-align:center;line-height:1;font-size:1.25rem;padding:3px 0 2px;color:color-mix(in srgb,var(--c,#c9a84c) 85%,#fff);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c,#c9a84c) 50%,transparent));transition:color .3s,filter .3s;}
+/* icon: left/right-front sit absolute in header */
+.card-icon-left{position:absolute;top:50%;left:8px;transform:translateY(-50%);font-size:1.2rem;color:color-mix(in srgb,var(--c,#c9a84c) 85%,#fff);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c,#c9a84c) 50%,transparent));z-index:4;pointer-events:none;transition:color .3s;}
+.card-icon-right{position:absolute;top:50%;right:8px;transform:translateY(-50%);font-size:1.2rem;color:color-mix(in srgb,var(--c,#c9a84c) 85%,#fff);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c,#c9a84c) 50%,transparent));z-index:4;pointer-events:none;transition:color .3s;}
+/* icon: background sits in card root */
+.card-icon-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;line-height:1;}
+.card-divider{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--c,var(--gold-dim)),transparent);position:relative;z-index:3;transition:background .3s;}
+.card-divider-gem{position:absolute;top:-4px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:var(--c,var(--gold-dim));rotate:45deg;border:1px solid var(--gold2);transition:background .3s;}
+/* ── META GRID  ──
+   Always 2×2 = 4 cells. Row1: cast|range  Row2: duration|tags
+   tags cell has a FIXED height so ritual/conc never shifts the grid */
+.card-meta{padding:5px 13px 4px;position:relative;z-index:3;display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;border-bottom:1px solid rgba(138,101,32,.2);}
+.card-meta-item{display:flex;flex-direction:column;}
+/* tags cell: fixed height, tags side-by-side so height never changes */
+.card-meta-tags{height:26px;display:flex;flex-direction:row;align-items:flex-end;gap:3px;overflow:hidden;}
+.card-meta-label{font-family:'Cinzel',serif;font-size:.49rem;letter-spacing:.12em;color:var(--gold-dim);text-transform:uppercase;}
+.card-meta-value{font-size:.68rem;color:var(--text);line-height:1.3;}
+.card-tag{font-family:'Cinzel',serif;font-size:.42rem;letter-spacing:.08em;padding:1px 4px;border-radius:2px;border:1px solid;text-transform:uppercase;display:inline-block;white-space:nowrap;}
+.card-tag-ritual{background:rgba(180,140,40,.18);border-color:#8a6520;color:var(--gold);}
+.card-tag-conc{background:rgba(60,120,160,.18);border-color:#3a7a9a;color:#70b8d8;}
+.card-components{padding:3px 13px;position:relative;z-index:3;display:flex;align-items:center;gap:5px;flex-wrap:wrap;border-bottom:1px solid rgba(138,101,32,.2);min-height:22px;}
+.card-comp-label{font-family:'Cinzel',serif;font-size:.49rem;letter-spacing:.12em;color:var(--gold-dim);text-transform:uppercase;flex-shrink:0;}
+.comp-badge{font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;background:color-mix(in srgb,var(--c,#8a6520) 25%,transparent);border:1px solid var(--c,var(--gold-dim));color:var(--gold2);padding:1px 5px;border-radius:2px;line-height:1.4;transition:background .3s,border-color .3s;}
+.comp-mat{font-size:.58rem;color:var(--text-dim);font-style:italic;margin-left:3px;}
+.card-body{flex:1;padding:6px 13px 8px;position:relative;z-index:3;overflow:hidden;}
+.card-description{font-size:.71rem;line-height:1.5;color:var(--text);overflow:hidden;max-height:100%;}
+.card-description p{margin-bottom:3px;}
+.card-description strong{color:var(--gold2);}
+.card-description em{color:#c8b895;}
+.card-accent-bar{height:5px;position:relative;z-index:3;border-radius:0 0 6px 6px;background:linear-gradient(to right,transparent,var(--c,#6b3fa0),transparent);transition:background .3s;}
+/* PRINT CARD */
+.print-card{width:63mm;height:88mm;border-radius:3mm;overflow:hidden;display:flex;flex-direction:column;page-break-inside:avoid;position:relative;background:#1a1008;border:1.5px solid;flex-shrink:0;}
+.print-card::before{content:'';position:absolute;inset:1.5mm;border-radius:2mm;pointer-events:none;border:.5px solid rgba(138,101,32,.35);z-index:0;}
+.print-card .card-header{padding:2.5mm 4mm 1.5mm;z-index:3;position:relative;border-bottom-width:.5px;}
+.print-card .card-title{font-size:.65rem;}
+.print-card .card-icon-center{font-size:.9rem;padding:1.5px 0 1px;}
+.print-card .card-icon-left{left:3mm;font-size:1rem;}
+.print-card .card-icon-right{right:3mm;font-size:1rem;}
+.print-card .card-icon-bg{} /* inherits dynamic inline style */
+.print-card .card-type{font-size:.52rem;}
+.print-card .card-divider{z-index:3;position:relative;}
+.print-card .card-divider-gem{width:6px;height:6px;top:-3px;}
+.print-card .card-meta{padding:1.5mm 4mm 1mm;z-index:3;position:relative;gap:1px 5px;}
+.print-card .card-meta-label{font-size:.41rem;}
+.print-card .card-meta-value{font-size:.53rem;}
+.print-card .card-meta-tags{height:20px;}
+.print-card .card-tag{font-size:.37rem;padding:.5px 2.5px;}
+.print-card .card-components{padding:1mm 4mm;z-index:3;position:relative;min-height:auto;}
+.print-card .card-comp-label{font-size:.41rem;}
+.print-card .comp-badge{font-size:.48rem;padding:0 1.5mm;}
+.print-card .comp-mat{font-size:.43rem;}
+.print-card .card-body{padding:1.5mm 4mm 2mm;z-index:3;position:relative;}
+.print-card .card-description{font-size:.57rem;line-height:1.36;}
+.print-card .card-description p{margin-bottom:.7mm;}
+.print-card .card-description ul,.print-card .card-description ol{padding-left:3mm;}
+.print-card .card-accent-bar{height:2mm;}
+@media print{
+  @page{margin:8mm;size:A4;}
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  body{background:white !important;overflow:visible !important;}
+  header,#workspace,footer{display:none !important;}
+  #print-area{display:flex !important;}
+  #preview-card{zoom:1 !important;}
+  .print-card:nth-child(9n){break-after:page;}
+}
+#print-area{display:none;flex-wrap:wrap;gap:2.5mm;align-content:flex-start;}
+/* Scale preview card up so it is comfortably visible on screen.
+   The card is a real print-card (63x88mm) — zoom makes it larger on screen
+   while preserving the exact same CSS proportions used for print. */
+#preview-card{zoom:1.18;}
+/* MODALS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:100;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:26px 28px;max-width:400px;width:90%;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 30px rgba(107,63,160,.2);}
+.modal-icon{font-size:2rem;text-align:center;margin-bottom:10px;line-height:1;}
+.modal h2{font-family:'Cinzel',serif;color:var(--gold2);margin-bottom:8px;font-size:1rem;letter-spacing:.06em;text-align:center;}
+.modal p{font-size:.88rem;color:var(--text-dim);margin-bottom:16px;text-align:center;line-height:1.6;}
+.modal-rule{border:none;border-top:1px solid var(--border);margin:0 0 14px;}
+.modal-actions{display:flex;gap:8px;justify-content:center;}
+.modal textarea{width:100%;height:150px;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:8px;font-size:.78rem;font-family:monospace;border-radius:3px;resize:vertical;outline:none;display:block;margin-bottom:12px;}
+#save-toast{position:fixed;bottom:36px;right:24px;z-index:200;background:linear-gradient(135deg,#1a3a1a,#2a5a2a);border:1px solid #4a9a4a;color:#8ae08a;font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.12em;padding:10px 18px;border-radius:4px;opacity:0;transform:translateY(10px) scale(.97);transition:opacity .25s,transform .25s;pointer-events:none;}
+#save-toast.visible{opacity:1;transform:translateY(0) scale(1);}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-dim);}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9798; Card Forge</h1>
+  <span class="subtitle">     <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#2f3238', 'N4N01XRFBX');kofiwidget2.draw();</script></span>
+</header>
+<div id="workspace">
+  <!-- ── EDITOR ── -->
+  <div id="editor-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      <span class="section-title" style="margin:0;padding:0;border:none;">Card Editor</span>
+      <button class="btn btn-gold btn-sm" id="btn-spell-search" style="font-size:.58rem;padding:4px 9px;gap:4px;">&#128269; Search Spells</button>
+    </div>
+    <div class="field-group">
+      <label>Title</label>
+      <input type="text" id="f-title" placeholder="e.g. Fireball">
+    </div>
+    <div class="field-group">
+      <label>Level &amp; School / Type</label>
+      <div class="type-row">
+        <select id="f-level">
+          <option value="">&#8212; Level &#8212;</option>
+          <option value="Cantrip">Cantrip</option>
+          <option value="1st-level">1st-level</option>
+          <option value="2nd-level">2nd-level</option>
+          <option value="3rd-level">3rd-level</option>
+          <option value="4th-level">4th-level</option>
+          <option value="5th-level">5th-level</option>
+          <option value="6th-level">6th-level</option>
+          <option value="7th-level">7th-level</option>
+          <option value="8th-level">8th-level</option>
+          <option value="9th-level">9th-level</option>
+        </select>
+        <input type="text" id="f-school" placeholder="e.g. Evocation...">
+      </div>
+    </div>
+    <div class="fields-grid">
+      <div class="field-group">
+        <label>Casting Time</label>
+        <input type="text" id="f-cast" placeholder="e.g. 1 action">
+      </div>
+      <div class="field-group">
+        <label>Range</label>
+        <input type="text" id="f-range" placeholder="e.g. 150 feet">
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Components</label>
+      <div class="components-row">
+        <label class="comp-check"><input type="checkbox" id="f-comp-v"> V</label>
+        <label class="comp-check"><input type="checkbox" id="f-comp-s"> S</label>
+        <label class="comp-check"><input type="checkbox" id="f-comp-m"> M</label>
+        <input type="text" id="f-comp-m-detail" placeholder="Material details..." style="flex:1;margin-left:4px;">
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Duration &amp; Properties</label>
+      <input type="text" id="f-duration" placeholder="e.g. 1 hour">
+      <div class="components-row" style="margin-top:8px;gap:20px;">
+        <label class="comp-check"><input type="checkbox" id="f-ritual"> R &nbsp;<span style="font-family:'EB Garamond',serif;font-size:.8rem;font-style:italic;color:var(--text-dim)">Ritual</span></label>
+        <label class="comp-check"><input type="checkbox" id="f-conc"> C &nbsp;<span style="font-family:'EB Garamond',serif;font-size:.8rem;font-style:italic;color:var(--text-dim)">Concentration</span></label>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Card Color</label>
+      <div class="color-options" id="color-picker">
+        <div class="color-swatch active" style="background:#6b3fa0" data-color="#6b3fa0" title="Arcane"></div>
+        <div class="color-swatch" style="background:#c04040" data-color="#c04040" title="Fire"></div>
+        <div class="color-swatch" style="background:#2e7ab0" data-color="#2e7ab0" title="Ice"></div>
+        <div class="color-swatch" style="background:#2e9e50" data-color="#2e9e50" title="Nature"></div>
+        <div class="color-swatch" style="background:#c9a84c" data-color="#c9a84c" title="Holy"></div>
+        <div class="color-swatch" style="background:#607080" data-color="#607080" title="Mundane"></div>
+        <div class="color-swatch" style="background:#a03060" data-color="#a03060" title="Hex"></div>
+        <div class="color-swatch" style="background:#307090" data-color="#307090" title="Water"></div>
+        <div class="color-swatch-custom" id="swatch-custom" title="Custom color">&#8230;</div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="comp-check" style="display:inline-flex;margin-bottom:0"><input type="checkbox" id="f-icon-show"> &nbsp;<span style="font-family:'EB Garamond',serif;font-size:.9rem;font-style:italic;color:var(--text)">Show Icon on Card</span></label>
+      <div id="icon-options" style="display:none">
+        <div class="icon-sub">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <select id="f-icon" style="flex:1"></select>
+            <div class="icon-preview-box"><i id="icon-preview-el" class="fas fa-question" style="opacity:.2"></i></div>
+          </div>
+          <div class="fields-grid" style="gap:8px;margin-bottom:8px;">
+            <div>
+              <span class="sub-label">Position on Card</span>
+              <select id="f-icon-pos">
+                <option value="center">Center</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+            <div>
+              <span class="sub-label">Layer</span>
+              <select id="f-icon-layer">
+                <option value="front">Front (over text)</option>
+                <option value="bg">Background (behind text)</option>
+              </select>
+            </div>
+          </div>
+          <div id="icon-bg-options" style="display:none;">
+            <div class="fields-grid" style="gap:8px;">
+              <div>
+                <span class="sub-label">Opacity: <span id="lbl-opacity">20%</span></span>
+                <input type="range" id="f-icon-opacity" min="5" max="60" value="20">
+              </div>
+              <div>
+                <span class="sub-label">Size: <span id="lbl-size">80px</span></span>
+                <input type="range" id="f-icon-size" min="40" max="200" value="80" step="5">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Description</label>
+      <div class="quill-wrap"><div id="quill-editor"></div></div>
+      <p class="desc-hint">Use <code>--split--</code> on its own line (or the &#x2702; toolbar button) to force a card split.</p>
+    </div>
+    <div class="editor-actions">
+      <button class="btn btn-primary" id="btn-save">+ Save to List</button>
+      <button class="btn btn-gold btn-sm" id="btn-clear">x Clear</button>
+    </div>
+  </div>
+  <!-- ── RIGHT ── -->
+  <div id="right-panel">
+    <div id="preview-panel">
+      <span class="preview-label">Live Preview</span>
+      <div id="preview-card" class="print-card" style="--c:#6b3fa0">
+        <div class="card-header" id="prev-header">
+          <div class="card-title" id="prev-title">Card Title</div>
+          <div class="card-type" id="prev-type"></div>
+        </div>
+        <div class="card-divider"><div class="card-divider-gem"></div></div>
+        <div class="card-meta">
+          <div class="card-meta-item"><span class="card-meta-label">Casting Time</span><span class="card-meta-value" id="prev-cast">-</span></div>
+          <div class="card-meta-item"><span class="card-meta-label">Range</span><span class="card-meta-value" id="prev-range">-</span></div>
+          <div class="card-meta-item"><span class="card-meta-label">Duration</span><span class="card-meta-value" id="prev-duration">-</span></div>
+          <div class="card-meta-tags" id="prev-tags"></div>
+        </div>
+        <div class="card-components"><span class="card-comp-label">Components</span><span id="prev-components">-</span></div>
+        <div class="card-body"><div class="card-description" id="prev-desc"></div></div>
+        <div class="card-accent-bar"></div>
+      </div>
+    </div>
+    <div id="list-panel">
+      <div class="list-header">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+          <p class="section-title" style="margin:0;border:none;padding:0">
+            Saved Cards <span style="color:var(--text-dim)" id="card-count">(0)</span>
+          </p>
+          <p class="section-title" id="print-est-label" style="margin:0;border:none;padding:0;display:none;">
+            Print Total <span style="color:var(--text-dim)" id="print-card-total">(0)</span>
+          </p>
+        </div>
+        <div class="list-actions">
+          <button class="btn btn-gold btn-sm" id="btn-export">Export JSON</button>
+          <button class="btn btn-gold btn-sm" id="btn-import-trigger">Import</button>
+          <button class="btn btn-primary btn-sm" id="btn-print">Print PDF</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+      </div>
+      <div id="card-list"></div>
+    </div>
+  </div>
+</div>
+<footer>
+  <span class="copy">&#169; 2026 Redostrike</span>
+  <span class="version">Card Forge v0.8</span>
+</footer>
+<div id="print-area"></div>
+<div id="save-toast">Saved to list</div>
+<!-- Custom color popup -->
+<div id="color-popup">
+  <button class="color-popup-close" id="color-popup-close">&times;</button>
+  <h4>Custom Color</h4>
+  <input type="color" class="color-popup-swatch" id="color-popup-native" value="#6b3fa0">
+  <div class="color-popup-row">
+    <input type="text" id="color-popup-hex" maxlength="7" placeholder="#rrggbb" style="font-family:monospace;font-size:.85rem;">
+    <button class="color-popup-apply" id="color-popup-apply">Apply</button>
+  </div>
+</div>
+<!-- Confirm / Alert modal -->
+<div class="overlay" id="confirm-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-icon" id="confirm-icon">!</div>
+    <h2 id="confirm-title">Confirm</h2>
+    <hr class="modal-rule">
+    <p id="confirm-message">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn btn-gold btn-sm" id="confirm-cancel-btn">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="confirm-ok-btn">OK</button>
+    </div>
+  </div>
+</div>
+<!-- Export modal -->
+<div class="overlay" id="export-modal">
+  <div class="modal">
+    <h2>Export Card Database</h2>
+    <hr class="modal-rule">
+    <p style="text-align:left;margin-bottom:8px">Your card data as JSON:</p>
+    <textarea id="export-content" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-gold btn-sm" id="btn-export-download">Download</button>
+      <button class="btn btn-primary btn-sm" id="btn-export-copy">Copy</button>
+      <button class="btn btn-danger btn-sm" id="btn-export-close">Close</button>
+    </div>
+  </div>
+</div>
+<!-- Spell search modal -->
+<div class="overlay" id="spell-modal">
+  <div class="modal" style="max-width:500px;width:94%;">
+    <h2>&#128269; Search D&amp;D 5e Spells</h2>
+    <hr class="modal-rule">
+    <p style="margin-bottom:10px;text-align:left;">Search the open5e database. Click a spell to load it into the editor.</p>
+    <div style="position:relative;margin-bottom:10px;">
+      <input type="text" id="spell-search-input" placeholder="e.g. Fireball, Mage Hand, Counterspell..." style="padding-right:36px;">
+      <span id="spell-search-spinner" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:.8rem;">&#8987;</span>
+    </div>
+    <div id="spell-search-source" style="font-size:.68rem;color:var(--text-dim);font-style:italic;margin-bottom:8px;text-align:right;">Powered by Open5e API</div>
+    <div id="spell-results" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-danger btn-sm" id="btn-spell-close">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+// ════ SPELL SEARCH (open5e API v1) ════
+// v1 has plain string fields (school, level, components, ritual, concentration)
+// and a name-focused search that returns relevant results.
+const LEVEL_MAP={0:'Cantrip',1:'1st-level',2:'2nd-level',3:'3rd-level',4:'4th-level',5:'5th-level',6:'6th-level',7:'7th-level',8:'8th-level',9:'9th-level'};
+let spellSearchTimer=null;
+
+document.getElementById('btn-spell-search').addEventListener('click',()=>{
+  document.getElementById('spell-modal').classList.add('open');
+  document.getElementById('spell-search-input').focus();
+});
+document.getElementById('btn-spell-close').addEventListener('click',()=>{
+  document.getElementById('spell-modal').classList.remove('open');
+});
+document.getElementById('spell-modal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('spell-modal'))document.getElementById('spell-modal').classList.remove('open');
+});
+document.getElementById('spell-search-input').addEventListener('input',function(){
+  clearTimeout(spellSearchTimer);
+  const q=this.value.trim();
+  if(q.length<2){document.getElementById('spell-results').innerHTML='<div style="color:var(--text-dim);font-style:italic;padding:8px;font-size:.85rem;">Type at least 2 characters to search...</div>';return;}
+  document.getElementById('spell-results').innerHTML='<div style="color:var(--text-dim);font-style:italic;padding:8px;font-size:.85rem;">Searching...</div>';
+  spellSearchTimer=setTimeout(()=>searchSpells(q),450);
+});
+
+async function searchSpells(q){
+  const resultsEl=document.getElementById('spell-results');
+  const spinner=document.getElementById('spell-search-spinner');
+  spinner.style.display='inline';
+  try{
+    // v1 API: school is a plain string, level is a string ("1st-level"), components is "V, S, M"
+    const url='https://api.open5e.com/v1/spells/?search='+encodeURIComponent(q)+'&limit=20&ordering=name';
+    const res=await fetch(url);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    spinner.style.display='none';
+    if(!data.results||!data.results.length){
+      resultsEl.innerHTML='<div style="color:var(--text-dim);font-style:italic;padding:8px;font-size:.85rem;">No spells found for "'+escHtml(q)+'"</div>';
+      return;
+    }
+    resultsEl.innerHTML='';
+    data.results.forEach(spell=>{
+      // v1: spell.level = "1st-level", spell.school = "Evocation" (plain strings)
+      const lvlStr=spell.level||LEVEL_MAP[spell.level_int]||'';
+      // Normalise level string to our dropdown values (v1 sometimes says "1st-level spell")
+      const lvlClean=lvlStr.replace(/\s*spell$/i,'').trim();
+      const schoolStr=typeof spell.school==='object'?(spell.school&&spell.school.name)||'':String(spell.school||'');
+      const row=document.createElement('div');
+      row.style.cssText='background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;cursor:pointer;transition:border-color .15s,background .15s;';
+      row.innerHTML='<div style="font-family:\'Cinzel\',serif;font-size:.76rem;color:var(--text);">'+escHtml(spell.name)+'</div>'+
+        '<div style="font-size:.68rem;color:var(--text-dim);font-style:italic;">'+escHtml([lvlClean,schoolStr].filter(Boolean).join(' \u2022 '))+'</div>';
+      row.addEventListener('mouseenter',()=>{row.style.borderColor='var(--gold-dim)';row.style.background='#1f1f2d';});
+      row.addEventListener('mouseleave',()=>{row.style.borderColor='var(--border)';row.style.background='var(--panel2)';});
+      row.addEventListener('click',()=>loadSpellIntoEditor(spell));
+      resultsEl.appendChild(row);
+    });
+  }catch(err){
+    spinner.style.display='none';
+    resultsEl.innerHTML='<div style="color:#e07070;padding:8px;font-size:.85rem;">Could not reach the spell database. Check your internet connection.<br><span style="font-size:.75rem;opacity:.7">'+escHtml(String(err))+'</span></div>';
+  }
+}
+
+function loadSpellIntoEditor(spell){
+  const g=id=>document.getElementById(id);
+
+  // Title
+  g('f-title').value=spell.name||'';
+
+  // Level — v1 gives "1st-level" or "cantrip" as a string; also accept level_int
+  const rawLvl=(spell.level||'').replace(/\s*spell$/i,'').trim();
+  const lvlFromInt=LEVEL_MAP[spell.level_int];
+  // Map to our exact dropdown values
+  const lvlNorm=rawLvl.charAt(0).toUpperCase()+rawLvl.slice(1);
+  // Our options: Cantrip, 1st-level … 9th-level
+  const validLevels=['Cantrip','1st-level','2nd-level','3rd-level','4th-level','5th-level','6th-level','7th-level','8th-level','9th-level'];
+  g('f-level').value=validLevels.includes(lvlNorm)?lvlNorm:(lvlFromInt||'');
+
+  // School — v1: plain string. v2 guard: object with .name
+  const schoolRaw=typeof spell.school==='object'?(spell.school&&spell.school.name)||'':String(spell.school||'');
+  g('f-school').value=schoolRaw.charAt(0).toUpperCase()+schoolRaw.slice(1);
+
+  // Stats
+  g('f-cast').value=spell.casting_time||'';
+  g('f-range').value=spell.range||'';
+  g('f-duration').value=spell.duration||'';
+
+  // Ritual / Concentration — v1: "yes"/"no" strings
+  g('f-ritual').checked=spell.ritual==='yes'||spell.ritual===true;
+  g('f-conc').checked=spell.concentration==='yes'||spell.concentration===true;
+
+  // Components — v1: "V, S, M" comma-separated string
+  const compStr=typeof spell.components==='string'?spell.components
+    :Array.isArray(spell.components)?spell.components.join(', '):String(spell.components||'');
+  const comps=compStr.split(',').map(s=>s.trim().toUpperCase());
+  g('f-comp-v').checked=comps.some(c=>c==='V'||c.startsWith('V'));
+  g('f-comp-s').checked=comps.some(c=>c==='S'||c.startsWith('S'));
+  g('f-comp-m').checked=comps.some(c=>c==='M'||c.startsWith('M'));
+  g('f-comp-m-detail').value=spell.material||'';
+
+  // Description — v1 desc may contain "***bold***" markdown; convert to HTML
+  const rawDesc=(spell.desc||'').trim();
+  const htmlDesc=rawDesc
+    .replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .split(/\n\n+/)
+    .map(p=>'<p>'+p.replace(/\n/g,' ').trim()+'</p>')
+    .join('');
+  quill.root.innerHTML=htmlDesc;
+
+  syncPreview();
+  document.getElementById('spell-modal').classList.remove('open');
+}
+</script>
+<script>
+const ICON_LIST=[{value:'',label:'-- None --'},{value:'fa-fire',label:'Fire / Flame'},{value:'fa-bolt',label:'Lightning'},{value:'fa-cloud-bolt',label:'Thunderstorm'},{value:'fa-snowflake',label:'Ice / Cold'},{value:'fa-wind',label:'Wind / Air'},{value:'fa-droplet',label:'Water'},{value:'fa-leaf',label:'Nature / Plant'},{value:'fa-skull',label:'Death / Skull'},{value:'fa-skull-crossbones',label:'Plague / Poison'},{value:'fa-ghost',label:'Ghost / Spirit'},{value:'fa-dragon',label:'Dragon'},{value:'fa-crow',label:'Raven / Dark'},{value:'fa-shield-halved',label:'Shield / Ward'},{value:'fa-cross',label:'Holy / Divine'},{value:'fa-eye',label:'Eye / Divination'},{value:'fa-eye-slash',label:'Invisibility'},{value:'fa-brain',label:'Mind / Psionics'},{value:'fa-wand-magic-sparkles',label:'Magic Wand'},{value:'fa-sparkles',label:'Sparkles / Arcane'},{value:'fa-scroll',label:'Scroll / Ritual'},{value:'fa-book-open',label:'Spell Book'},{value:'fa-heart-pulse',label:'Healing'},{value:'fa-hand-sparkles',label:'Touch Spell'},{value:'fa-moon',label:'Moon / Night'},{value:'fa-sun',label:'Sun / Light'},{value:'fa-star',label:'Star / Celestial'},{value:'fa-explosion',label:'Explosion / Blast'},{value:'fa-biohazard',label:'Acid / Toxic'},{value:'fa-person-running',label:'Movement / Haste'},{value:'fa-lock',label:'Abjuration / Lock'},{value:'fa-arrows-spin',label:'Transmutation'},{value:'fa-gem',label:'Gem / Crystal'},{value:'fa-feather',label:'Feather / Flight'},{value:'fa-hammer',label:'Force / Impact'}];
+(function(){const sel=document.getElementById('f-icon');ICON_LIST.forEach(ic=>{const o=document.createElement('option');o.value=ic.value;o.textContent=ic.label;sel.appendChild(o);});})();
+
+// ═══ STATE ═══
+let cards=[],editingId=null,currentColor='#6b3fa0',lastLevel='';
+
+// ═══ QUILL ═══
+const quill=new Quill('#quill-editor',{
+  theme:'snow',
+  placeholder:'Describe the card effect...',
+  modules:{toolbar:[['bold','italic','underline'],[{'list':'ordered'},{'list':'bullet'}],['clean']]}
+});
+quill.on('text-change',syncPreview);
+
+// Inject custom split button into Quill toolbar
+(function(){
+  const btn=document.createElement('button');
+  btn.className='ql-split-btn';
+  btn.innerHTML='&#x2702;';
+  btn.title='Insert page split (--split--)';
+  btn.type='button';
+  // Add to the last .ql-formats group
+  const formats=document.querySelectorAll('.ql-toolbar .ql-formats');
+  const target=formats[formats.length-1];
+  target.appendChild(btn);
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    const range=quill.getSelection(true);
+    const idx=range?range.index:quill.getLength()-1;
+    quill.insertText(idx,'\n--split--\n','user');
+    quill.setSelection(idx+12);
+    quill.focus();
+  });
+})();
+
+// ═══ INPUT LISTENERS ═══
+['f-title','f-school','f-cast','f-range','f-duration','f-comp-m-detail'].forEach(id=>document.getElementById(id).addEventListener('input',syncPreview));
+['f-comp-v','f-comp-s','f-comp-m','f-ritual','f-conc','f-level'].forEach(id=>document.getElementById(id).addEventListener('change',syncPreview));
+
+// Icon show toggle — show/hide sub-options
+document.getElementById('f-icon-show').addEventListener('change',function(){
+  document.getElementById('icon-options').style.display=this.checked?'block':'none';
+  syncPreview();
+});
+// Icon sub-option listeners
+['f-icon','f-icon-pos'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{updateIconPreview();syncPreview();}));
+document.getElementById('f-icon-layer').addEventListener('change',function(){
+  document.getElementById('icon-bg-options').style.display=this.value==='bg'?'block':'none';
+  syncPreview();
+});
+['f-icon-opacity','f-icon-size'].forEach(id=>{
+  const el=document.getElementById(id);
+  el.addEventListener('input',()=>{
+    document.getElementById('lbl-opacity').textContent=document.getElementById('f-icon-opacity').value+'%';
+    document.getElementById('lbl-size').textContent=document.getElementById('f-icon-size').value+'px';
+    syncPreview();
+  });
+});
+
+// ═══ COLOR ═══
+document.getElementById('color-picker').addEventListener('click',e=>{
+  const sw=e.target.closest('.color-swatch');
+  if(!sw)return;
+  selectColor(sw.dataset.color,sw);
+});
+document.getElementById('swatch-custom').addEventListener('click',e=>{e.stopPropagation();openColorPopup();});
+function selectColor(color,activeSwatch){
+  currentColor=color;
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+  const cs=document.getElementById('swatch-custom');
+  cs.classList.remove('active');
+  if(activeSwatch){activeSwatch.classList.add('active');}
+  else{cs.classList.add('active');cs.style.background=color;cs.style.borderStyle='solid';}
+  syncPreview();
+}
+let colorPopupOpen=false;
+function openColorPopup(){
+  const popup=document.getElementById('color-popup');
+  const rect=document.getElementById('swatch-custom').getBoundingClientRect();
+  popup.style.left=Math.min(rect.left,window.innerWidth-220)+'px';
+  popup.style.top=(rect.bottom+6)+'px';
+  document.getElementById('color-popup-native').value=currentColor.length===7?currentColor:'#6b3fa0';
+  document.getElementById('color-popup-hex').value=currentColor;
+  popup.classList.add('open');colorPopupOpen=true;
+}
+document.getElementById('color-popup-close').addEventListener('click',()=>{document.getElementById('color-popup').classList.remove('open');colorPopupOpen=false;});
+document.getElementById('color-popup-native').addEventListener('input',function(){document.getElementById('color-popup-hex').value=this.value;});
+document.getElementById('color-popup-hex').addEventListener('input',function(){if(/^#[0-9a-fA-F]{6}$/.test(this.value.trim()))document.getElementById('color-popup-native').value=this.value.trim();});
+document.getElementById('color-popup-apply').addEventListener('click',()=>{
+  let hex=document.getElementById('color-popup-hex').value.trim();
+  if(!/^#/.test(hex))hex='#'+hex;
+  if(/^#[0-9a-fA-F]{6}$/.test(hex)){document.getElementById('color-popup').classList.remove('open');colorPopupOpen=false;selectColor(hex,null);}
+});
+document.addEventListener('click',e=>{
+  if(colorPopupOpen&&!document.getElementById('color-popup').contains(e.target)&&e.target.id!=='swatch-custom'){document.getElementById('color-popup').classList.remove('open');colorPopupOpen=false;}
+});
+
+function updateIconPreview(){
+  const val=document.getElementById('f-icon').value;
+  const el=document.getElementById('icon-preview-el');
+  if(val){el.className='fas '+val;el.style.opacity='1';}
+  else{el.className='fas fa-question';el.style.opacity='0.2';}
+}
+
+// ═══ BUTTONS ═══
+document.getElementById('btn-save').addEventListener('click',saveCard);
+document.getElementById('btn-clear').addEventListener('click',async()=>{const ok=await showConfirm({icon:'x',title:'Clear Editor',message:'Discard all current fields and start fresh?',okLabel:'Clear',danger:true});if(ok)clearEditor();});
+document.getElementById('btn-export').addEventListener('click',openExportModal);
+document.getElementById('btn-import-trigger').addEventListener('click',()=>document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change',importCards);
+document.getElementById('btn-print').addEventListener('click',printCards);
+document.getElementById('btn-export-download').addEventListener('click',downloadExport);
+document.getElementById('btn-export-copy').addEventListener('click',copyExport);
+document.getElementById('btn-export-close').addEventListener('click',()=>document.getElementById('export-modal').classList.remove('open'));
+document.getElementById('card-list').addEventListener('click',e=>{
+  const delBtn=e.target.closest('[data-action="delete"]');
+  const row=e.target.closest('.list-item');
+  if(delBtn){e.stopPropagation();confirmDelete(+delBtn.dataset.id);return;}
+  if(row){loadIntoEditor(cards.find(c=>c.id===+row.dataset.id));}
+});
+async function confirmDelete(id){
+  const card=cards.find(c=>c.id===id);
+  const ok=await showConfirm({icon:'?',title:'Delete Card',message:'Delete "'+((card&&card.title)||'this card')+'"? This cannot be undone.',okLabel:'Delete',danger:true});
+  if(ok){cards=cards.filter(c=>c.id!==id);if(editingId===id){editingId=null;clearEditor();}renderList();}
+}
+
+// ═══ ICON HELPERS ═══
+function getIconData(){
+  const show=document.getElementById('f-icon-show').checked;
+  if(!show)return null;
+  const icon=document.getElementById('f-icon').value;
+  if(!icon)return null;
+  return{
+    icon,
+    pos:document.getElementById('f-icon-pos').value||'center',
+    layer:document.getElementById('f-icon-layer').value||'front',
+    opacity:parseInt(document.getElementById('f-icon-opacity').value)||20,
+    size:parseInt(document.getElementById('f-icon-size').value)||80,
+    show:true
+  };
+}
+
+// Apply icon to a live card DOM element
+function applyIconToCard(cardEl,iconData,color){
+  // Remove all previously placed icons
+  cardEl.querySelectorAll('.card-icon-center,.card-icon-left,.card-icon-right,.card-icon-bg').forEach(e=>e.remove());
+  if(!iconData||!iconData.icon)return;
+  const c=color||'#6b3fa0';
+  const i='fas '+iconData.icon;
+  const colorStyle='color:color-mix(in srgb,'+c+' 85%,#fff);filter:drop-shadow(0 0 4px color-mix(in srgb,'+c+' 50%,transparent));';
+  if(iconData.layer==='bg'){
+    const el=document.createElement('div');
+    el.className='card-icon-bg';
+    el.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;line-height:1;opacity:'+(iconData.opacity/100)+';font-size:'+iconData.size+'px;'+colorStyle;
+    el.innerHTML='<i class="'+i+'"></i>';
+    cardEl.appendChild(el);
+  } else {
+    const header=cardEl.querySelector('.card-header');
+    if(iconData.pos==='center'){
+      const el=document.createElement('div');
+      el.className='card-icon-center';
+      el.style.cssText=colorStyle;
+      el.innerHTML='<i class="'+i+'"></i>';
+      // Insert after card-title
+      const title=header.querySelector('.card-title');
+      title.insertAdjacentElement('afterend',el);
+    } else {
+      const el=document.createElement('div');
+      el.className=iconData.pos==='left'?'card-icon-left':'card-icon-right';
+      el.style.cssText=colorStyle;
+      el.innerHTML='<i class="'+i+'"></i>';
+      header.appendChild(el);
+    }
+  }
+}
+
+// Build icon HTML for print — returns {headerIcon,bgIcon} strings
+function iconHtmlForPrint(iconData,color,cls){
+  if(!iconData||!iconData.icon)return{headerIcon:'',bgIcon:''};
+  const c=color||'#6b3fa0';
+  const colorSt='color:color-mix(in srgb,'+c+' 85%,#fff);filter:drop-shadow(0 0 3px '+c+'60);';
+  const iClass='fas '+iconData.icon;
+  if(iconData.layer==='bg'){
+    const st='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;pointer-events:none;line-height:1;opacity:'+(iconData.opacity/100)+';font-size:'+Math.round(iconData.size*0.62)+'px;'+colorSt;
+    return{headerIcon:'',bgIcon:'<div class="card-icon-bg" style="'+st+'"><i class="'+iClass+'"></i></div>'};
+  }
+  const pClass=iconData.pos==='center'?'card-icon-center':(iconData.pos==='left'?'card-icon-left':'card-icon-right');
+  return{headerIcon:'<div class="'+pClass+(cls?' '+cls+' '+pClass:'')+'" style="'+colorSt+'"><i class="'+iClass+'"></i></div>',bgIcon:''};
+}
+
+// ═══ SYNC PREVIEW ═══
+function syncPreview(){
+  const g=id=>document.getElementById(id);
+  g('prev-title').textContent=g('f-title').value||'Card Title';
+  g('prev-type').textContent=[g('f-level').value,g('f-school').value.trim()].filter(Boolean).join(' \u2022 ');
+  g('prev-cast').textContent=g('f-cast').value||'-';
+  g('prev-range').textContent=g('f-range').value||'-';
+  g('prev-duration').textContent=g('f-duration').value||'-';
+  g('prev-desc').innerHTML=quill.root.innerHTML;
+
+  // Tags (ritual/conc) — side by side in fixed-height cell
+  const tagsEl=g('prev-tags');tagsEl.innerHTML='';
+  if(g('f-ritual').checked){const t=document.createElement('span');t.className='card-tag card-tag-ritual';t.textContent='Ritual';tagsEl.appendChild(t);}
+  if(g('f-conc').checked){const t=document.createElement('span');t.className='card-tag card-tag-conc';t.textContent='Conc.';tagsEl.appendChild(t);}
+
+  // Components
+  const compEl=g('prev-components');compEl.innerHTML='';
+  const bl=[];
+  if(g('f-comp-v').checked)bl.push('V');
+  if(g('f-comp-s').checked)bl.push('S');
+  if(g('f-comp-m').checked)bl.push('M');
+  if(bl.length){bl.forEach(b=>{const s=document.createElement('span');s.className='comp-badge';s.textContent=b;compEl.appendChild(s);});if(g('f-comp-m').checked&&g('f-comp-m-detail').value){const s=document.createElement('span');s.className='comp-mat';s.textContent=g('f-comp-m-detail').value;compEl.appendChild(s);}}
+  else{compEl.textContent='-';}
+
+  // Color
+  const card=g('preview-card');
+  card.style.setProperty('--c',currentColor);
+
+  // Icon
+  applyIconToCard(card,getIconData(),currentColor);
+}
+
+// ═══ SAVE / LOAD / CLEAR ═══
+function saveCard(){
+  const data=getEditorData();
+  if(!data.title.trim()){showAlert({icon:'!',title:'Missing Title',message:'Please enter a title before saving.'});return;}
+  if(editingId!==null){const idx=cards.findIndex(c=>c.id===editingId);if(idx!==-1)cards[idx]={...data,id:editingId};editingId=null;}
+  else{data.id=Date.now();cards.push(data);}
+  lastLevel=data.level;
+  renderList();clearEditor(true);showToast();
+}
+
+function getEditorData(){
+  const g=id=>document.getElementById(id);
+  const id=getIconData();
+  return{
+    title:g('f-title').value,level:g('f-level').value,school:g('f-school').value,
+    castingTime:g('f-cast').value,range:g('f-range').value,duration:g('f-duration').value,
+    ritual:g('f-ritual').checked,concentration:g('f-conc').checked,
+    compV:g('f-comp-v').checked,compS:g('f-comp-s').checked,compM:g('f-comp-m').checked,
+    compMaterial:g('f-comp-m-detail').value,
+    iconShow:!!id,icon:id?id.icon:'',iconPos:id?id.pos:'center',iconLayer:id?id.layer:'front',
+    iconOpacity:id?id.opacity:20,iconSize:id?id.size:80,
+    description:quill.root.innerHTML,color:currentColor
+  };
+}
+
+function loadIntoEditor(card){
+  if(!card)return;
+  const g=id=>document.getElementById(id);
+  g('f-title').value=card.title||'';
+  g('f-level').value=card.level||'';
+  g('f-school').value=card.school||card.type||'';
+  g('f-cast').value=card.castingTime||'';
+  g('f-range').value=card.range||'';
+  g('f-duration').value=card.duration||'';
+  g('f-ritual').checked=!!card.ritual;
+  g('f-conc').checked=!!card.concentration;
+  g('f-comp-v').checked=!!card.compV;
+  g('f-comp-s').checked=!!card.compS;
+  g('f-comp-m').checked=!!card.compM;
+  g('f-comp-m-detail').value=card.compMaterial||'';
+  g('f-icon-show').checked=!!card.iconShow;
+  g('icon-options').style.display=card.iconShow?'block':'none';
+  g('f-icon').value=card.icon||'';
+  g('f-icon-pos').value=card.iconPos||'center';
+  g('f-icon-layer').value=card.iconLayer||'front';
+  g('icon-bg-options').style.display=(card.iconLayer==='bg')?'block':'none';
+  g('f-icon-opacity').value=card.iconOpacity||20;
+  g('f-icon-size').value=card.iconSize||80;
+  g('lbl-opacity').textContent=(card.iconOpacity||20)+'%';
+  g('lbl-size').textContent=(card.iconSize||80)+'px';
+  quill.root.innerHTML=card.description||'';
+  currentColor=card.color||'#6b3fa0';
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));
+  const cs=g('swatch-custom');cs.classList.remove('active');cs.style.background='';cs.style.borderStyle='';
+  const preset=document.querySelector('.color-swatch[data-color="'+currentColor+'"]');
+  if(preset){preset.classList.add('active');}else{cs.classList.add('active');cs.style.background=currentColor;cs.style.borderStyle='solid';}
+  editingId=card.id;
+  document.querySelectorAll('.list-item').forEach(el=>el.classList.toggle('active',+el.dataset.id===card.id));
+  updateIconPreview();syncPreview();
+  g('editor-panel').scrollTop=0;
+}
+
+function clearEditor(keepLevel=false){
+  const g=id=>document.getElementById(id);
+  ['f-title','f-school','f-cast','f-range','f-duration','f-comp-m-detail'].forEach(id=>g(id).value='');
+  ['f-comp-v','f-comp-s','f-comp-m','f-ritual','f-conc','f-icon-show'].forEach(id=>g(id).checked=false);
+  g('icon-options').style.display='none';
+  g('icon-bg-options').style.display='none';
+  g('f-icon').value='';g('f-icon-pos').value='center';g('f-icon-layer').value='front';
+  g('f-icon-opacity').value=20;g('f-icon-size').value=80;
+  g('lbl-opacity').textContent='20%';g('lbl-size').textContent='80px';
+  quill.setText('');
+  g('f-level').value=keepLevel?lastLevel:'';
+  currentColor='#6b3fa0';
+  document.querySelectorAll('.color-swatch').forEach((s,i)=>s.classList.toggle('active',i===0));
+  g('swatch-custom').classList.remove('active');g('swatch-custom').style.background='';g('swatch-custom').style.borderStyle='';
+  document.querySelectorAll('.list-item').forEach(el=>el.classList.remove('active'));
+  editingId=null;updateIconPreview();syncPreview();
+}
+
+// ═══ RENDER LIST ═══
+function renderList(){
+  const listEl=document.getElementById('card-list');
+  document.getElementById('card-count').textContent='('+cards.length+')';
+  listEl.innerHTML='';
+  if(!cards.length){
+    listEl.innerHTML='<div class="empty-state">No cards yet &#8212; create one above!</div>';
+    document.getElementById('print-est-label').style.display='none';
+    return;
+  }
+  cards.forEach(card=>{
+    const typeLine=[card.level,card.school||card.type||''].filter(Boolean).join(' \u2022 ');
+    const item=document.createElement('div');
+    item.className='list-item'+(card.id===editingId?' active':'');
+    item.dataset.id=card.id;
+    item.innerHTML='<div class="list-item-dot" style="background:'+(card.color||'#6b3fa0')+'"></div>'+
+      '<div class="list-item-info">'+
+        '<div class="list-item-title">'+escHtml(card.title)+'</div>'+
+        '<div class="list-item-type">'+escHtml(typeLine)+'</div>'+
+        '<div class="list-item-hint">&#8629; click to edit</div>'+
+      '</div>'+
+      '<div class="list-item-btns"><button class="btn btn-danger btn-sm" data-action="delete" data-id="'+card.id+'">&#x2715;</button></div>';
+    listEl.appendChild(item);
+  });
+  // Compute print total (including text-split cards) after fonts load
+  document.fonts.ready.then(()=>{
+    const dims=getPrintBodyDimensions();
+    const total=cards.reduce((sum,c)=>sum+getPrintCardsForCard(c,dims).length,0);
+    document.getElementById('print-card-total').textContent='('+total+')';
+    document.getElementById('print-est-label').style.display='';
+  });
+}
+
+// ═══ BUILD PRINT CARD HTML ═══
+// ALL cards (including continuations) get full meta. Only the title gets the page label.
+function buildPrintCardHTML(card,description,pageLabel){
+  const c=card.color||'#6b3fa0';
+  const comps=[];
+  if(card.compV)comps.push('V');if(card.compS)comps.push('S');if(card.compM)comps.push('M');
+  const badges=comps.length
+    ?comps.map(l=>'<span class="comp-badge" style="border-color:'+c+';background:'+c+'30">'+l+'</span>').join('')+(card.compM&&card.compMaterial?'<span class="comp-mat">'+escHtml(card.compMaterial)+'</span>':'')
+    :'&#8212;';
+  const typeLine=[card.level,card.school||card.type||''].filter(Boolean).join(' \u2022 ');
+  const tags=[];
+  if(card.ritual)tags.push('<span class="card-tag card-tag-ritual">Ritual</span>');
+  if(card.concentration)tags.push('<span class="card-tag card-tag-conc">Conc.</span>');
+  const tagsHtml='<div class="card-meta-tags">'+tags.join('')+'</div>';
+  const titleDisp=pageLabel
+    ?(escHtml(card.title)+' <span style="font-size:.5rem;opacity:.65;font-style:italic;">'+escHtml(pageLabel)+'</span>')
+    :escHtml(card.title);
+  // icon
+  const iData=card.iconShow&&card.icon?{icon:card.icon,pos:card.iconPos||'center',layer:card.iconLayer||'front',opacity:card.iconOpacity||20,size:card.iconSize||80}:null;
+  const {headerIcon,bgIcon}=iconHtmlForPrint(iData,c,'');
+  // build header: for center icon, insert between title and type
+  let headerInner='<div class="card-title">'+titleDisp+'</div>';
+  if(iData&&iData.layer!=='bg'&&iData.pos==='center')headerInner+=headerIcon;
+  else if(iData&&iData.layer!=='bg')headerInner+=headerIcon; // left/right added as siblings
+  headerInner+='<div class="card-type">'+escHtml(typeLine)+'</div>';
+  return '<div class="print-card" style="border-color:'+c+';--c:'+c+'">'+
+    bgIcon+
+    '<div class="card-header" style="border-bottom:.5px solid '+c+'55;background:'+c+'10">'+headerInner+'</div>'+
+    '<div class="card-divider" style="background:linear-gradient(to right,transparent,'+c+',transparent)"><div class="card-divider-gem" style="background:'+c+'"></div></div>'+
+    '<div class="card-meta">'+
+      '<div class="card-meta-item"><span class="card-meta-label">Casting Time</span><span class="card-meta-value">'+escHtml(card.castingTime||'&#8212;')+'</span></div>'+
+      '<div class="card-meta-item"><span class="card-meta-label">Range</span><span class="card-meta-value">'+escHtml(card.range||'&#8212;')+'</span></div>'+
+      '<div class="card-meta-item"><span class="card-meta-label">Duration</span><span class="card-meta-value">'+escHtml(card.duration||'&#8212;')+'</span></div>'+
+      tagsHtml+
+    '</div>'+
+    '<div class="card-components"><span class="card-comp-label">Components</span>'+badges+'</div>'+
+    '<div class="card-body"><div class="card-description">'+( description||'')+'</div></div>'+
+    '<div class="card-accent-bar" style="background:linear-gradient(to right,transparent,'+c+',transparent)"></div>'+
+  '</div>';
+}
+
+// ═══ OVERFLOW / SPLIT ═══
+const SPLIT_MARKER='--split--';
+
+function getPrintBodyDimensions(){
+  const w=document.createElement('div');
+  w.style.cssText='position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;';
+  w.innerHTML=buildPrintCardHTML({title:'X',level:'',school:'',castingTime:'X',range:'X',duration:'X',compV:false,compS:false,compM:false,compMaterial:'',iconShow:false,icon:'',ritual:false,concentration:false,color:'#6b3fa0'},'',null);
+  document.body.appendChild(w);
+  const body=w.querySelector('.card-body');
+  const dims={ww:body.clientWidth,hh:body.clientHeight};
+  document.body.removeChild(w);return dims;
+}
+
+function fitsInBox(html,w,h){
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;top:-9999px;visibility:hidden;overflow:hidden;width:'+w+'px;font-family:"EB Garamond",serif;font-size:.57rem;line-height:1.36;';
+  d.innerHTML=html;document.body.appendChild(d);
+  const ok=d.scrollHeight<=h+3;document.body.removeChild(d);return ok;
+}
+
+function extractManualSegments(html){
+  const div=document.createElement('div');div.innerHTML=html;
+  const nodes=Array.from(div.childNodes);
+  const segs=[];let cur='';
+  for(const node of nodes){
+    const txt=(node.textContent||node.nodeValue||'').trim();
+    if(txt===SPLIT_MARKER){segs.push(cur);cur='';}
+    else{cur+=node.nodeType===Node.TEXT_NODE?node.textContent:(node.outerHTML||'');}
+  }
+  segs.push(cur);
+  return segs.filter(s=>s.trim());
+}
+
+function autoSplitSegment(html,w,h){
+  if(!html||fitsInBox(html,w,h))return[html||''];
+  const temp=document.createElement('div');temp.innerHTML=html;
+  const nodes=Array.from(temp.childNodes).filter(n=>n.nodeType===Node.TEXT_NODE?n.textContent.trim():true);
+  if(!nodes.length)return[html];
+  const pages=[];let cur='';
+  for(const node of nodes){
+    const chunk=node.nodeType===Node.TEXT_NODE?node.textContent:(node.outerHTML||'');
+    if(!chunk.trim())continue;
+    const cand=cur+chunk;
+    if(cur&&!fitsInBox(cand,w,h)){
+      if(!fitsInBox(chunk,w,h)){
+        const words=chunk.replace(/<[^>]+>/g,' ').split(/\s+/).filter(Boolean);
+        for(const word of words){const wc=cur+(cur?' ':'')+word;if(cur&&!fitsInBox(wc,w,h)){pages.push(cur);cur=word;}else{cur=wc;}}
+      }else{pages.push(cur);cur=chunk;}
+    }else{cur=cand;}
+  }
+  if(cur.trim())pages.push(cur);
+  return pages.length?pages:[html];
+}
+
+function splitHtmlIntoPages(html,w,h){
+  if(!html)return[''];
+  const manuals=extractManualSegments(html);
+  const pages=[];
+  for(const seg of manuals)pages.push(...autoSplitSegment(seg,w,h));
+  return pages.length?pages:[''];
+}
+
+function getPrintCardsForCard(card,dims){
+  const pages=splitHtmlIntoPages(card.description,dims.ww,dims.hh);
+  const total=pages.length;
+  return pages.map((ph,i)=>buildPrintCardHTML(card,ph,total>1?(i+1)+'/'+total:null));
+}
+
+// ═══ PRINT ═══
+// A4 at 8mm margins: ~194mm × ~281mm printable.
+// Card 63×88mm, gap 2.5mm → 3 cols × 3 rows = 9 per page.
+// nth-child(9n) CSS rule forces hard page break after every 9th card.
+async function printCards(){
+  if(!cards.length){showAlert({icon:'?',title:'Nothing to Print',message:'Add some cards to your list first.'});return;}
+  await document.fonts.ready;
+  const dims=getPrintBodyDimensions();
+  const allPrintCards=cards.flatMap(c=>getPrintCardsForCard(c,dims));
+  document.getElementById('print-area').innerHTML=allPrintCards.join('');
+  window.print();
+}
+
+// ═══ EXPORT ═══
+let exportData='';
+function openExportModal(){
+  if(!cards.length){showAlert({icon:'!',title:'Nothing to Export',message:'Add some cards to your list first.'});return;}
+  exportData=JSON.stringify(cards,null,2);
+  document.getElementById('export-content').value=exportData;
+  document.getElementById('export-modal').classList.add('open');
+}
+function downloadExport(){Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([exportData],{type:'application/json'})),download:'cards.json'}).click();}
+function copyExport(){
+  navigator.clipboard.writeText(exportData)
+    .then(()=>{document.getElementById('export-modal').classList.remove('open');showToast('Copied to clipboard');})
+    .catch(()=>{document.getElementById('export-content').select();document.execCommand('copy');});
+}
+
+// ═══ IMPORT (backward-compatible) ═══
+async function importCards(){
+  const input=document.getElementById('import-file');const file=input.files[0];
+  if(!file)return;
+  let text;try{text=await file.text();}catch{showAlert({icon:'x',title:'Read Error',message:'Could not read the file.'});input.value='';return;}
+  input.value='';
+  let imported;
+  try{imported=JSON.parse(text);if(!Array.isArray(imported)||!imported.length)throw new Error();}
+  catch{showAlert({icon:'x',title:'Invalid File',message:"That doesn't look like a Card Forge JSON export."});return;}
+  const ok=await showConfirm({icon:'!',title:'Import Cards',message:'Import '+imported.length+' card(s)? This replaces your current list.',okLabel:'Import'});
+  if(!ok)return;
+  const def={id:0,title:'',level:'',school:'',type:'',castingTime:'',range:'',duration:'',ritual:false,concentration:false,compV:false,compS:false,compM:false,compMaterial:'',iconShow:false,icon:'',iconPos:'center',iconLayer:'front',iconOpacity:20,iconSize:80,description:'',color:'#6b3fa0'};
+  cards=imported.map((c,i)=>({...def,...c,id:c.id||Date.now()+i}));
+  renderList();clearEditor();
+}
+
+// ═══ MODALS ═══
+function showConfirm({icon='!',title='Confirm',message='Are you sure?',okLabel='Confirm',danger=false}){
+  return new Promise(resolve=>{
+    const modal=document.getElementById('confirm-modal');
+    document.getElementById('confirm-icon').textContent=icon;
+    document.getElementById('confirm-title').textContent=title;
+    document.getElementById('confirm-message').textContent=message;
+    const okBtn=document.getElementById('confirm-ok-btn');
+    const cancelBtn=document.getElementById('confirm-cancel-btn');
+    okBtn.textContent=okLabel;okBtn.className='btn '+(danger?'btn-danger':'btn-primary')+' btn-sm';
+    cancelBtn.style.display='';modal.classList.add('open');
+    const done=val=>{modal.classList.remove('open');okBtn.removeEventListener('click',onOk);cancelBtn.removeEventListener('click',onCancel);modal.removeEventListener('click',onBg);resolve(val);};
+    const onOk=()=>done(true),onCancel=()=>done(false),onBg=e=>{if(e.target===modal)done(false);};
+    okBtn.addEventListener('click',onOk,{once:true});cancelBtn.addEventListener('click',onCancel,{once:true});modal.addEventListener('click',onBg);
+  });
+}
+function showAlert({icon='i',title='Notice',message=''}){
+  return new Promise(resolve=>{
+    const modal=document.getElementById('confirm-modal');
+    document.getElementById('confirm-icon').textContent=icon;
+    document.getElementById('confirm-title').textContent=title;
+    document.getElementById('confirm-message').textContent=message;
+    const okBtn=document.getElementById('confirm-ok-btn');
+    const cancelBtn=document.getElementById('confirm-cancel-btn');
+    okBtn.textContent='OK';okBtn.className='btn btn-primary btn-sm';
+    cancelBtn.style.display='none';modal.classList.add('open');
+    const done=()=>{modal.classList.remove('open');cancelBtn.style.display='';okBtn.removeEventListener('click',done);modal.removeEventListener('click',onBg);resolve();};
+    const onBg=e=>{if(e.target===modal)done();};
+    okBtn.addEventListener('click',done,{once:true});modal.addEventListener('click',onBg);
+  });
+}
+
+// ═══ TOAST ═══
+let toastTimer=null;
+function showToast(msg='Saved to list'){
+  const t=document.getElementById('save-toast');t.textContent=msg;t.classList.add('visible');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('visible'),2200);
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+syncPreview();renderList();
+</script>
+</body>
+</html>
